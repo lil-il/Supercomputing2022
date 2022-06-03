@@ -90,12 +90,11 @@ public:
         this->scene = scene;
         this->image = image;
         this->num_of_threads = num_of_threads;
-        Start(num_of_threads);
     };
 
-    void Start(int num_of_workers)
+    void Start()
     {
-        for (int i = 0; i < num_of_workers; ++i)
+        for (int i = 0; i < this->num_of_threads; ++i)
         {
             workers_.emplace_back([this]() {
                 WorkerRoutine();
@@ -164,6 +163,7 @@ int main(int argc, char **argv) {
         for(int y = 0; y < viewPlaneResolutionY; y++) {
             threadPool->AddPoint({x, y});
         }
+    threadPool->Start();
     threadPool->Join();
 
     auto end = std::chrono::high_resolution_clock::now();
