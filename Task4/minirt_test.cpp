@@ -55,15 +55,11 @@ struct Point {
 class Queue {
 public:
     void Push(Point value) {
-        std::lock_guard<std::mutex> guard(mutexLocker);
         deque_.push_back(value);
-        isNotEmpty.notify_one();
     }
 
     Point Pop() {
         std::unique_lock<std::mutex> lock(mutexLocker);
-        while (deque_.empty())
-            isNotEmpty.wait(lock);
         Point front = deque_.front();
         deque_.pop_front();
         return front;
@@ -71,7 +67,6 @@ public:
 
     std::deque<Point> deque_;
     std::mutex mutexLocker;
-    std::condition_variable isNotEmpty;
 };
 
 class ThreadPool
@@ -80,7 +75,6 @@ public:
     int num_of_threads;
     Queue tasks_;
     std::vector<std::thread> workers_;
-    std::condition_variable cv_;
     Scene scene;
     Image image;
     ViewPlane viewPlane;
@@ -102,9 +96,9 @@ public:
         }
     }
 
-    void AddPoint(Point par)
+    void AddPoint(Point point)
     {
-        tasks_.Push(par);
+        tasks_.Push(point);
     }
 
     void WorkerRoutine()
@@ -132,8 +126,8 @@ public:
 };
 
 int main(int argc, char **argv) {
-    int viewPlaneResolutionX = (argc > 1 ? std::stoi(argv[1]) : 1500);
-    int viewPlaneResolutionY = (argc > 2 ? std::stoi(argv[2]) : 1500);
+    int viewPlaneResolutionX = (argc > 1 ? std::stoi(argv[1]) : 2000);
+    int viewPlaneResolutionY = (argc > 2 ? std::stoi(argv[2]) : 2000);
     int numOfSamples = (argc > 3 ? std::stoi(argv[3]) : 1);
     std::string sceneFile = (argc > 4 ? argv[4] : "");
 
@@ -158,7 +152,7 @@ int main(int argc, char **argv) {
     Image image(viewPlaneResolutionX, viewPlaneResolutionY); // computed image
 
     auto start = std::chrono::high_resolution_clock::now();
-    auto threadPool = new ThreadPool(3, scene, image, viewPlane);
+    auto threadPool = new ThreadPool(16, scene, image, viewPlane);
     for(int x = 0; x < viewPlaneResolutionX; x++)
         for(int y = 0; y < viewPlaneResolutionY; y++) {
             threadPool->AddPoint({x, y});
